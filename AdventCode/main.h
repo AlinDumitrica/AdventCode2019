@@ -5,6 +5,7 @@
 #include <stack>
 #include <math.h> 
 #include <assert.h>
+#include <numeric>
 
 typedef int64_t int64;
 using namespace std;
@@ -20,4 +21,5 @@ CREATE_TEST(6);
 CREATE_TEST(7);
 CREATE_TEST(8);
 CREATE_TEST(9);
-//char* Test1();
+CREATE_TEST(10);
+CREATE_TEST(11);
