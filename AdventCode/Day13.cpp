@@ -1,7 +1,11 @@
+#ifdef DAY13
 #include "main.h"
+#include <windows.h>
+#include <chrono>
+#include <thread>
 
 #define LONGLONG "%I64d"
-#define COUNT 50000
+#define COUNT 5000
 
 #define OPCODE_SUM			1
 #define OPCODE_MUL			2
@@ -37,12 +41,6 @@ EXTRACT_TYPE(n) == 2 ? PARAM_BASE(n) = value: \
 #define ROTATE(direction, angle) ((direction + (angle * 2 - 1) + 4) % 4)
 #define ADVANCE(x, y, direction) x += -(direction-2) * (direction%2); y+= (direction-1)* ((direction+1)%2);
 
-struct PaintCell
-{
-	bool color = BLACK;
-	int hitCount = 0;
-} ship[SHIP_SIZE][SHIP_SIZE];;
-
 struct Program
 {
 public:
@@ -56,7 +54,7 @@ public:
 		memcpy(&opcode, _opcode, count * sizeof(int64));
 	}
 
-	int GetResultBloking(int64 input, int64 output[])
+	int GetResultBloking3(int64 input, int64 output[])
 	{
 		int inputRead = 0;
 		int outputGenerated = 0;
@@ -92,7 +90,7 @@ public:
 				index += 2;
 				break;
 			}
-			
+
 			case OPCODE_JUMP_TRUE:
 			{
 				int64 p1 = RVALUE(1);
@@ -142,6 +140,9 @@ public:
 				int64 p1 = RVALUE(1);
 				output[outputGenerated++] = p1;
 				index += 2;
+
+				if (outputGenerated == 3)
+					return OPCODE_OUTPUT;
 				break;
 			}
 
@@ -158,13 +159,14 @@ public:
 	}
 };
 
-CREATE_TEST(11)
+int64 game[50][50];
+
+CREATE_TEST(13)
 {
-	FILE *file = fopen("day11.txt", "r");
+	FILE *file = fopen("day13.txt", "r");
 
 	int64 number, count = 0;
 	int64 opcode[COUNT];
-	
 
 	while (fscanf(file, LONGLONG",", &number) == 1)
 	{
@@ -172,28 +174,69 @@ CREATE_TEST(11)
 	}
 
 	Program program = Program(opcode, count);
-	int64 x = SHIP_SIZE / 2, y = x, result[2], direction = 0;
-	ship[x][y].color = 1;
-
-	while (program.GetResultBloking(ship[x][y].color, result) != OPCODE_END)
+	int64 result[3], maxX = 0, maxY = 0;
+	int64  ballX, ballY, paddleX, paddleY;
+	while (program.GetResultBloking3(0, result) != OPCODE_END)
 	{
-		ship[x][y].hitCount++;
-		ship[x][y].color = result[0];
-		direction = ROTATE(direction, result[1]);
-		ADVANCE(x, y, direction);
-	}
-
-	int hitCount = 0;
-	for (int index = 0; index < SHIP_SIZE; index++)
-	{
-		for (int index2 = 0; index2 < SHIP_SIZE; index2++)
+		//cout << result[0] << " " << result[1] << " " << result[2] << endl;
+		game[result[0]][result[1]] = result[2];
+		maxX = max(maxX, result[0]);
+		maxY = max(maxY, result[1]);
+		if (result[2] == 4)
 		{
-			if(ship[index2][index].hitCount > 0)
-				hitCount++;
-			cout << (ship[index2][index].color ? "*" : "_");
+			ballX = result[0]; ballY = result[1];
 		}
-		cout << endl;
+		else if (result[2] == 3)
+		{
+			paddleX = result[0]; paddleY = result[1];
+		}
+	}
+	
+	opcode[0] = 2; Program program2 = Program(opcode, count);
+	HANDLE hStdout;
+	COORD destCoord; destCoord.X = 0; destCoord.Y = 0;
+	hStdout = GetStdHandle(STD_OUTPUT_HANDLE);
+	
+	int maxScore = 0;
+	while (true)
+	{
+		SetConsoleCursorPosition(hStdout, destCoord);
+		while (program2.GetResultBloking3(paddleX < ballX ? 1 : paddleX == ballX ? 0 : -1, result) != OPCODE_END)
+		{
+			game[result[0]][result[1]] = result[2];
+			if (result[2] == 4)
+			{
+				ballX = result[0]; ballY = result[1];
+			}
+			else if (result[2] == 3)
+			{
+				paddleX = result[0]; paddleY = result[1];
+			}
+			if (result[0] == -1 && result[1] == 0)
+			{
+				maxScore = result[2];
+				cout << result[2] << endl;
+				break;
+			}
+		}
+
+		for (int iY = 0; iY < maxY; iY++)
+		{
+			for (int iX = 0; iX < maxX; iX++)
+				switch (game[iX][iY])
+				{
+				case 0: cout << " "; break;
+				case 1: cout << "|"; break;
+				case 2: cout << "#"; break;
+				case 3: cout << "_"; break;
+				case 4: cout << "o"; break;
+				}
+			cout << endl;
+		}
+
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
 	}
 
-	cout << hitCount;
+	cout << "END:" << maxScore;
 }
+#endif
